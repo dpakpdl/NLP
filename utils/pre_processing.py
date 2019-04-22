@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import docx
-from files import *
+from utils.files import *
 import os
 import re
 import nltk

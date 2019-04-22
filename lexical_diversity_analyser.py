@@ -1,4 +1,4 @@
-from pre_processing import read_input_file, group_to_corpuses, remove_special_characters_from_lines
+from utils.pre_processing import read_input_file, group_to_corpuses, remove_special_characters_from_lines
 
 
 def lexical_diversity_analyser(words_grouping):

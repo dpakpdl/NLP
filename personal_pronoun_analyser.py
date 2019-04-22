@@ -4,8 +4,8 @@ import os
 import pandas as pd
 from scipy.stats import mannwhitneyu
 
-from files import *
-from pre_processing import read_input_file, remove_special_characters_from_lines, group_to_corpuses, \
+from utils.files import *
+from utils.pre_processing import read_input_file, remove_special_characters_from_lines, group_to_corpuses, \
     write_to_frequency_file
 
 

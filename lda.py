@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import nltk, spacy, gensim
-from pre_processing import read_input_file, group_to_corpuses
-from files import *
+from utils.pre_processing import read_input_file, group_to_corpuses
+from utils.files import *
 # Sklearn
 from sklearn.decomposition import LatentDirichletAllocation, TruncatedSVD
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
