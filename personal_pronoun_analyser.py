@@ -14,18 +14,6 @@ def personal_pronoun_analysis(words_grouping):
     return dict((x, words_grouping.count(x)) for x in set(pronouns_to_count))
 
 
-def mann_whitney_u_test(group_pa, group_yt):
-    for key, value in group_pa.items():
-        pa_count = [value]
-        yt_count = [group_yt.get(key, 0)]
-        try:
-            mw_stat, mw_p = mannwhitneyu(pa_count, yt_count)
-        except ValueError:
-            mw_stat = -1  # in case of ties, Mann-Whitney cannot rank, and so cannot calculate U
-            mw_p = -1
-        print(key, pa_count, yt_count, mw_stat, mw_p)
-
-
 def mann_whitney_u_test_with_file_write():
     pa_word_freq_file = os.path.join(OUTPUT_PATH, PA_WORD_FREQUENCY_CSV_FILENAME)
     yt_word_freq_file = os.path.join(OUTPUT_PATH, YT_WORD_FREQUENCY_CSV_FILENAME)
@@ -79,9 +67,9 @@ def main():
     filename = 'Input/US3_ALL_TRANSCRIPTS.docx'
     lines = read_input_file(filename)
     pa_group, yt_group = group_to_corpuses(lines)
-    pa_cleaned_up = remove_special_characters_from_lines(pa_group)
+    pa_cleaned_up, _ = remove_special_characters_from_lines(pa_group)
 
-    yt_cleaned_up = remove_special_characters_from_lines(yt_group)
+    yt_cleaned_up, _ = remove_special_characters_from_lines(yt_group)
 
     pa_personal_pronouns = personal_pronoun_analysis(pa_cleaned_up)
     print("PA personal pronoun: %s" % pa_personal_pronouns)
@@ -89,7 +77,6 @@ def main():
     print("YT personal pronoun: %s" % yt_personal_pronouns)
     write_to_frequency_file(PA_WORD_FREQUENCY_CSV_FILENAME, pa_personal_pronouns)
     write_to_frequency_file(YT_WORD_FREQUENCY_CSV_FILENAME, yt_personal_pronouns)
-    mann_whitney_u_test(pa_personal_pronouns, yt_personal_pronouns)
     mann_whitney_u_test_with_file_write()
 
 
