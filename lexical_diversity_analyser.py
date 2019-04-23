@@ -11,9 +11,9 @@ def main():
     pa_group, yt_group = group_to_corpuses(lines)  # grouping into two corpuses and removing the unnecessary lines
 
     # tokenize, remove special characters, stem and lemmatize
-    pa_cleaned_up = remove_special_characters_from_lines(pa_group)
+    pa_cleaned_up, _ = remove_special_characters_from_lines(pa_group)
 
-    yt_cleaned_up = remove_special_characters_from_lines(yt_group)
+    yt_cleaned_up, _ = remove_special_characters_from_lines(yt_group)
 
     # calculate the lexical diversity
     pa_ld = lexical_diversity_analyser(pa_cleaned_up)
