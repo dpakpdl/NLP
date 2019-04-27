@@ -63,21 +63,64 @@ def mann_whitney_u_test_with_file_write():
     print("Mann Whitney-U test done.")
 
 
+def mann_whitney_u_test(group_pa, group_yt):
+    print("Mann Whitney-u Test:")
+    output = dict()
+    for key, yt_value in group_yt.items():
+        pa_value = group_pa.get(key)
+        try:
+            mw_stat, mw_p = mannwhitneyu(pa_value, yt_value, alternative="greater")
+        except ValueError:
+            mw_stat = -1  # in case of ties, Mann-Whitney cannot rank, and so cannot calculate U
+            mw_p = -1
+        output.update({
+            key: (mw_stat, mw_p, sum(pa_value), sum(yt_value))
+        })
+    return output
+
+
 def main():
     filename = 'Input/US3_ALL_TRANSCRIPTS.docx'
     lines = read_input_file(filename)
-    pa_group, yt_group = group_to_corpuses(lines)
-    pa_cleaned_up, _ = remove_special_characters_from_lines(pa_group)
+    pa_group, yt_group, pa_grouped_by_participant, yt_grouped_by_participant = group_to_corpuses(lines)
+    pa_personal_pronoun_dict = {}
+    yt_personal_pronoun_dict = {}
 
-    yt_cleaned_up, _ = remove_special_characters_from_lines(yt_group)
+    # iterate participant wise in each corpus to get personal pronoun count
+    for participant, pa_sentences in pa_grouped_by_participant.items():
+        # remove special characters from pa sentences of a participant
+        pa_cleaned_up, _ = remove_special_characters_from_lines(pa_sentences)
 
-    pa_personal_pronouns = personal_pronoun_analysis(pa_cleaned_up)
-    print("PA personal pronoun: %s" % pa_personal_pronouns)
-    yt_personal_pronouns = personal_pronoun_analysis(yt_cleaned_up)
-    print("YT personal pronoun: %s" % yt_personal_pronouns)
-    write_to_frequency_file(PA_WORD_FREQUENCY_CSV_FILENAME, pa_personal_pronouns)
-    write_to_frequency_file(YT_WORD_FREQUENCY_CSV_FILENAME, yt_personal_pronouns)
-    mann_whitney_u_test_with_file_write()
+        # get personal pronoun count for that participant in pa corpus
+        pa_personal_pronoun_count = personal_pronoun_analysis(pa_cleaned_up)
+
+        # remove special characters from yt sentences of that participant
+        yt_cleaned_up, _ = remove_special_characters_from_lines(yt_grouped_by_participant.get(participant, []))
+
+        # get personal pronoun count for that participant in yt corpus
+
+        yt_personal_pronoun_count = personal_pronoun_analysis(yt_cleaned_up)
+
+        for pronoun, value in pa_personal_pronoun_count.items():
+            # obtain count vector of each pronoun from all participants in pa corpus
+            pa_pronoun_count = pa_personal_pronoun_dict.get(pronoun, [])
+            pa_pronoun_count.append(value)
+            pa_personal_pronoun_dict.update({pronoun: pa_pronoun_count})
+
+            # obtain count vector of each pronoun from all participants in yt corpus
+            yt_pronoun_count = yt_personal_pronoun_dict.get(pronoun, [])
+            yt_pronoun_count.append(yt_personal_pronoun_count.get(pronoun, 0))
+            yt_personal_pronoun_dict.update({pronoun: yt_pronoun_count})
+
+    output = mann_whitney_u_test(pa_personal_pronoun_dict, yt_personal_pronoun_dict)
+    pd.DataFrame.from_dict({i: output[i] for i in output.keys()}, orient='index')
+    # pa_personal_pronouns = personal_pronoun_analysis(pa_cleaned_up)
+    # print("PA personal pronoun: %s" % pa_personal_pronouns)
+    # yt_personal_pronouns = personal_pronoun_analysis(yt_cleaned_up)
+    # print("YT personal pronoun: %s" % yt_personal_pronouns)
+    # write_to_frequency_file(PA_WORD_FREQUENCY_CSV_FILENAME, pa_personal_pronouns)
+    # write_to_frequency_file(YT_WORD_FREQUENCY_CSV_FILENAME, yt_personal_pronouns)
+    # mann_whitney_u_test_with_file_write()
 
 
 main()

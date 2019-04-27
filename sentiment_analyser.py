@@ -1,7 +1,8 @@
 import gensim
+import pandas as pd
 import spacy
-from scipy.stats import mannwhitneyu
 
+from personal_pronoun_analyser import mann_whitney_u_test
 from utils.dict_tagger import DictionaryTagger
 from utils.pre_processing import read_input_file, group_to_corpuses
 from utils.splitter import POSTagger, Splitter
@@ -44,52 +45,68 @@ def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
     return texts_out
 
 
-def mann_whitney_u_test(group_pa, group_yt):
-    print("PA Sentiment: %s" % group_pa)
-    print("YT Sentiment: %s" % group_yt)
-    print("Mann Whitney-u Test:")
-    pa_count = list(group_pa.values())
-    yt_count = list(group_yt.values())
-    try:
-        mw_stat, mw_p = mannwhitneyu(pa_count, yt_count)
-    except ValueError:
-        mw_stat = -1  # in case of ties, Mann-Whitney cannot rank, and so cannot calculate U
-        mw_p = -1
-
-    print("MannWhitney U Value: %s" % mw_stat)
-    print("MannWhitney rho Value: %s" % mw_p)
-
-
 if __name__ == "__main__":
     filename = 'Input/US3_ALL_TRANSCRIPTS.docx'
     lines = read_input_file(filename)
-    pa_group, yt_group = group_to_corpuses(lines)
+    pa_grouping, yt_grouping, pa_grouped_by_participant, yt_grouped_by_participant = group_to_corpuses(lines)
 
-    pa_group = lemmatization(sent_to_words(pa_group))
-    pa_group = ". ".join(pa_group)
     splitter = Splitter()
     postagger = POSTagger()
-
-    splitted_sentences = splitter.split(pa_group)
-
-    pos_tagged_sentences = postagger.pos_tag(splitted_sentences)
-
     dicttagger = DictionaryTagger(NRC_EMOTION_LEXICON_PATH)
 
-    dict_tagged_sentences = dicttagger.tag(pos_tagged_sentences)
-    pa_sentiment = sentiment_score(dict_tagged_sentences)
+    pa_sentiment_full = dict()
+    yt_sentiment_full = dict()
 
-    yt_group = lemmatization(sent_to_words(yt_group))
+    # iterate throught sentences in each participant to find the score for emotions/sentiments
+    for participant, pa_sentences in pa_grouped_by_participant.items():
+        # lemmatization of tokenized sentences in each participants in pa
+        pa_sentences_group = lemmatization(sent_to_words(pa_sentences))
+        pa_sentences_group = ". ".join(pa_sentences_group)
 
-    yt_group = ". ".join(yt_group)
-    splitter = Splitter()
-    postagger = POSTagger()
-    splitted_sentences = splitter.split(yt_group)
+        # split the paragraphs pa corpus into sentences and each sentence are tokenized to words list
+        splitted_sentences = splitter.split(pa_sentences_group)
 
-    pos_tagged_sentences = postagger.pos_tag(splitted_sentences)
+        # POS tagging of tokenized words in sentences
+        pos_tagged_sentences = postagger.pos_tag(splitted_sentences)
 
-    dicttagger = DictionaryTagger(NRC_EMOTION_LEXICON_PATH)
+        # associating emotions and sentiment to the words in PA corpus using the loaded word emotion-sentiment
+        # from NRC emmotion lexicon
+        dict_tagged_sentences = dicttagger.tag(pos_tagged_sentences)
 
-    dict_tagged_sentences = dicttagger.tag(pos_tagged_sentences)
-    yt_sentiment = sentiment_score(dict_tagged_sentences)
-    mann_whitney_u_test(pa_sentiment, yt_sentiment)
+        # calculate the scores for each participant in pa
+        pa_sentiment = sentiment_score(dict_tagged_sentences)
+
+        # get sentences for that participant from yt corpus
+        yt_sentences = yt_grouped_by_participant.get(participant, [])
+
+        # lemmatization of tokenized sentences for that participants in pa
+        yt_sentences_group = lemmatization(sent_to_words(yt_sentences))
+
+        yt_sentences_group = ". ".join(yt_sentences_group)
+
+        # split the paragraphs yt corpus into sentences and each sentence are tokenized to words list
+        splitted_sentences = splitter.split(yt_sentences_group)
+
+        # POS tagging of tokenized words in sentences
+        pos_tagged_sentences = postagger.pos_tag(splitted_sentences)
+
+        # associating emotions and sentiment to the words in YT corpus using the loaded word emotion-sentiment
+        # from NRC emmotion lexicon
+        dict_tagged_sentences = dicttagger.tag(pos_tagged_sentences)
+
+        # calculate the scores for that participant in yt
+        yt_sentiment = sentiment_score(dict_tagged_sentences)
+
+        # iterate through each emotion/sentiment to get the final value
+        for emotion, score in yt_sentiment.items():
+            # get scores vector for each emotion/sentiment from each participant in yt
+            yt_scores = yt_sentiment_full.get(emotion, [])
+            yt_scores.append(score)
+            yt_sentiment_full.update({emotion: yt_scores})
+
+            # get scores vector for each emotion/sentiment from each participant in pa
+            pa_scores = pa_sentiment_full.get(emotion, [])
+            pa_scores.append(pa_sentiment.get(emotion, 0))
+            pa_sentiment_full.update({emotion: pa_scores})
+    output = mann_whitney_u_test(pa_sentiment_full, yt_sentiment_full)
+    pd.DataFrame.from_dict({i: output[i] for i in output.keys()}, orient='index')

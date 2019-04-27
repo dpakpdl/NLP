@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import nltk, spacy, gensim
 from utils.pre_processing import read_input_file, group_to_corpuses
-from utils.files import *
 # Sklearn
 from sklearn.decomposition import LatentDirichletAllocation, TruncatedSVD
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -120,7 +119,7 @@ def get_optimized_lda_params(data):
     docnames = ["Doc" + str(i) for i in range(len(data))]
 
     # Make the pandas dataframe
-    df_document_topic = pd.DataFrame(np.round(lda_output, 2), columns=topicnames, index=docnames)
+    df_document_topic = pd.DataFrame(np.round(lda_output, 3), columns=topicnames, index=docnames)
 
     # Get dominant topic for each document
     dominant_topic = np.argmax(df_document_topic.values, axis=1)
@@ -136,7 +135,7 @@ def get_optimized_lda_params(data):
     print(df_topic_distribution)
 
     # pyLDAvis.enable_notebook()
-    # panel = pyLDAvis.sklearn.prepare(best_lda_model, data_vectorized, vectorizer, mds='tsne')
+    # panel = pyLDAvis.sklearn.prepare(best_lda_model, data_vectorized, vectorizer, mds='tsne', sort=False)
 
     # Topic-Keyword Matrix
     df_topic_keywords = pd.DataFrame(best_lda_model.components_)
@@ -185,5 +184,5 @@ def analyser(data):
 if __name__ == "__main__":
     filename = 'Input/US3_ALL_TRANSCRIPTS.docx'
     lines = read_input_file(filename)
-    pa_group, yt_group = group_to_corpuses(lines)
-    get_optimized_lda_params(pa_group)
+    pa_group, yt_group, _, _ = group_to_corpuses(lines)
+    get_optimized_lda_params(yt_group)

@@ -10,7 +10,7 @@ import nltk
 import pandas as pd
 from nltk.stem import WordNetLemmatizer
 
-from files import *
+from .files import *
 
 sys.getdefaultencoding()
 
@@ -35,38 +35,62 @@ def read_input_file(file_path):
 def group_to_corpuses(lines_in_input):
     yt_group = list()
     pa_group = list()
+
+    pa_grouped_by_participant = dict()
+    yt_grouped_by_participant = dict()
+
     initial_group_flag = None
     regex = re.compile('^P[0-9]+$')
-
+    participant = 'P01'
     for line in lines_in_input:
+        # remove empty line
         if not line.strip():
             continue
+        # remove line starting with Joni or Jim
         if line.strip().startswith("Joni: ") or line.strip().startswith("Jim:"):
             continue
+
+        # remove line starting with R: or R : since it is the interviwer part. There is no uniformity in starting
+        # character so I have to use different srating characters
         if line.strip().startswith("R:") or line.strip().startswith("R: ") or line.strip().startswith("R :"):
             continue
+
+        # If R: is present in a group of lines, remove the one sentence starting with R: and leave others
         if "R:" in line:
-            lines_list = line.splitlines()
-            for single_line in lines_list:
+            line_list = line.splitlines()
+            lines_list = line_list
+            for single_line in line_list:
                 if single_line.startswith("R:"):
                     lines_list.remove(single_line)
             line = ",".join(lines_list)
 
+        # some line have P0, P1, (P+Number) so we use regex to find matching and remove those sentences
         if re.match(regex, line):
+            participant = line
             continue
+        # some line with date and time stamp information of inverview are removed
         if line.strip().startswith('2018-11-') or line.strip().startswith('Total experiment talk time:'):
             continue
-        line = re.sub(r'\[[^()]*\]', '', line)  # regex removing text between brackets
 
+        # regex removing text between brackets
+        line = re.sub(r'\[[^()]*\]', '', line)
+
+        # replace special characters given below with comma
         line = line.replace('...', ' ,')
         line = line.replace('…', ' ,')
 
+        # this is a case of non-alphanumeric character present in sentence which does not start with P: or YT or PA
+        # convert non-alphanumeric to numeric and remove sentences starting with R : or R4. or P10(that is left over
+        # due to non-alpha numeric character)
         if not line.strip().startswith("P:") and not line.strip().startswith('YT') and not line.strip().startswith(
                 'PA'):
             line = "".join([i if ord(i) < 128 else ' ' for i in line])
             if line.strip().startswith("R :") or line.strip().startswith("R4.") or line.strip().startswith("P10"):
                 continue
 
+        # check if line start with YT or PA
+        # if it starts with YT set group flag to YT and keep all sentences to YT group until flag is changed to PA
+        # if flag is PA, keep all sentences to PA group until flag is changed to YT
         if line.strip().lower() == 'yt':
             initial_group_flag = 'yt'
             continue
@@ -75,10 +99,16 @@ def group_to_corpuses(lines_in_input):
             continue
         elif line:
             if initial_group_flag == 'pa':
+                line_group = pa_grouped_by_participant.get(participant, [])
+                line_group.append(line)
+                pa_grouped_by_participant.update({participant: line_group})
                 pa_group.append(line)
             else:
+                line_group = yt_grouped_by_participant.get(participant, [])
+                line_group.append(line)
+                yt_grouped_by_participant.update({participant: line_group})
                 yt_group.append(line)
-    return pa_group, yt_group
+    return pa_group, yt_group, pa_grouped_by_participant, yt_grouped_by_participant
 
 
 def remove_special_characters_from_lines(lines):
@@ -132,8 +162,8 @@ def write_to_corpus_file(data, _type=PA_CORPUS_TEXT):
 if __name__ == "__main__":
     filename = 'Input/US3_ALL_TRANSCRIPTS.docx'
     lines = read_input_file(filename)
-    pa_group_, yt_group_ = group_to_corpuses(lines)
+    pa_group, yt_group, _, _ = group_to_corpuses(lines)
     # write_to_corpus_file(pa_group, PA_CORPUS_TEXT)
     # write_to_corpus_file(yt_group, YT_CORPUS_TEXT)
-    pa_cleaned_up = remove_special_characters_from_lines(pa_group_)
-    yt_cleaned_up = remove_special_characters_from_lines(yt_group_)
+    # pa_cleaned_up = remove_special_characters_from_lines(pa_group_)
+    # yt_cleaned_up = remove_special_characters_from_lines(yt_group_)

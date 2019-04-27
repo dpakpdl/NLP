@@ -8,7 +8,7 @@ def lexical_diversity_analyser(words_grouping):
 def main():
     filename = 'Input/US3_ALL_TRANSCRIPTS.docx'
     lines = read_input_file(filename)  # read input docx file
-    pa_group, yt_group = group_to_corpuses(lines)  # grouping into two corpuses and removing the unnecessary lines
+    pa_group, yt_group, _, _ = group_to_corpuses(lines)  # grouping into two corpuses and removing the unnecessary lines
 
     # tokenize, remove special characters, stem and lemmatize
     pa_cleaned_up, _ = remove_special_characters_from_lines(pa_group)
